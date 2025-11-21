@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 # Replace these placeholders with your actual affiliate IDs when approved
 LINK_CLOUDWAYS = "https://www.cloudways.com/en/?id=YOUR_ID"
 LINK_KINSTA = "https://kinsta.com/?kaid=YOUR_ID"
-LINK_BLUEHOST = "https://www.bluehost.com/track/YOUR_ID"
+LINK_WPENGINE = "https://www.shareasale.com/r.cfm?b=394686&u=YOUR_ID&m=41388"
 
 st.set_page_config(page_title="Site Speed Doctor", page_icon="⚡", layout="centered")
 
@@ -19,13 +19,16 @@ st.markdown("""
     .metric-box { text-align: center; padding: 20px; background: #f0f2f6; border-radius: 10px; margin: 10px 0; }
     .recommendation-box { border-left: 5px solid #ff4b4b; padding: 20px; background-color: #fff5f5; border-radius: 5px; margin-top: 20px; }
     .cta-button { 
-        display: block; width: 100%; padding: 15px; margin: 10px 0;
+        display: block; width: 100%; padding: 15px; margin: 5px 0;
         text-align: center; color: white !important; text-decoration: none; 
-        font-weight: bold; border-radius: 8px; font-size: 1.1rem;
+        font-weight: bold; border-radius: 8px; font-size: 1rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: transform 0.1s;
     }
+    .cta-button:hover { transform: scale(1.02); }
     .btn-cloudways { background-color: #2c3e50; }
     .btn-kinsta { background-color: #5333ed; }
+    .btn-wpengine { background-color: #0ecad4; color: #000 !important; }
     .info-card { background-color: #e8f4f8; padding: 15px; border-radius: 8px; border: 1px solid #d1e7dd; text-align: center; height: 100%; }
 </style>
 """, unsafe_allow_html=True)
@@ -77,7 +80,7 @@ with col1:
 with col2:
     scan_btn = st.button("🚀 Test Speed", type="primary", use_container_width=True)
 
-# --- PRE-SCAN DASHBOARD (Fills the empty space) ---
+# --- PRE-SCAN DASHBOARD ---
 if not scan_btn:
     st.markdown("### Why Server Speed Matters")
     c1, c2, c3 = st.columns(3)
@@ -104,7 +107,7 @@ if scan_btn and target_url:
         else:
             color, msg, status = "red", "CRITICAL: Your hosting is too slow.", "FAIL"
 
-        # 1. The Gauge Chart (Visual Hook)
+        # 1. The Gauge Chart
         fig = go.Figure(go.Indicator(
             mode = "gauge+number",
             value = ttfb,
@@ -122,7 +125,7 @@ if scan_btn and target_url:
         ))
         st.plotly_chart(fig, use_container_width=True)
 
-        # 2. The Diagnosis
+        # 2. The Diagnosis & Solution
         if status == "FAIL" or status == "WARN":
             st.markdown(f"""
             <div class="recommendation-box">
@@ -133,12 +136,16 @@ if scan_btn and target_url:
             </div>
             """, unsafe_allow_html=True)
             
-            # 3. The Affiliate Links (The Solution)
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.markdown(f"""<a href="{LINK_CLOUDWAYS}" target="_blank" class="cta-button btn-cloudways">🚀 Upgrade to Cloudways</a>""", unsafe_allow_html=True)
-            with col_b:
-                st.markdown(f"""<a href="{LINK_KINSTA}" target="_blank" class="cta-button btn-kinsta">👑 Upgrade to Kinsta</a>""", unsafe_allow_html=True)
+            st.markdown("### 🚀 Recommended Fixes:")
+            
+            # 3. The Affiliate Links (Trifecta)
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.markdown(f"""<a href="{LINK_WPENGINE}" target="_blank" class="cta-button btn-wpengine">💎 WP Engine<br><span style='font-size:0.8em'>Best Managed</span></a>""", unsafe_allow_html=True)
+            with c2:
+                st.markdown(f"""<a href="{LINK_CLOUDWAYS}" target="_blank" class="cta-button btn-cloudways">☁️ Cloudways<br><span style='font-size:0.8em'>Best Tech</span></a>""", unsafe_allow_html=True)
+            with c3:
+                st.markdown(f"""<a href="{LINK_KINSTA}" target="_blank" class="cta-button btn-kinsta">👑 Kinsta<br><span style='font-size:0.8em'>Best Enterprise</span></a>""", unsafe_allow_html=True)
         else:
             st.success(f"✅ {msg}")
             st.balloons()
