@@ -11,15 +11,28 @@ LINK_WPENGINE = "https://www.shareasale.com/r.cfm?b=394686&u=YOUR_ID&m=41388"
 
 st.set_page_config(page_title="Site Speed Doctor", page_icon="⚡", layout="centered")
 
-# --- CUSTOM CSS ---
+# --- CUSTOM CSS (FIXED FOR DARK MODE) ---
 st.markdown("""
 <style>
     .main-header { font-size: 3rem; text-align: center; font-weight: 800; color: #333; margin-bottom: 10px; }
     .sub-header { font-size: 1.2rem; text-align: center; color: #666; margin-bottom: 30px; }
     .metric-box { text-align: center; padding: 20px; background: #f0f2f6; border-radius: 10px; margin: 10px 0; }
-    .recommendation-box { border-left: 5px solid #ff4b4b; padding: 20px; background-color: #fff5f5; border-radius: 5px; margin-top: 20px; }
+    
+    /* FIXED: Force Text Black for Recommendation Box */
+    .recommendation-box { 
+        border-left: 5px solid #ff4b4b; 
+        padding: 20px; 
+        background-color: #fff5f5; 
+        border-radius: 5px; 
+        margin-top: 20px;
+        color: #000000 !important;
+    }
+    .recommendation-box h3, .recommendation-box p, .recommendation-box strong {
+        color: #000000 !important;
+    }
+
     .cta-button { 
-        display: block; width: 100%; padding: 15px; margin: 5px 0;
+        display: block; width: 100%; padding: 12px; margin: 5px 0;
         text-align: center; color: white !important; text-decoration: none; 
         font-weight: bold; border-radius: 8px; font-size: 1rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
@@ -29,7 +42,20 @@ st.markdown("""
     .btn-cloudways { background-color: #2c3e50; }
     .btn-kinsta { background-color: #5333ed; }
     .btn-wpengine { background-color: #0ecad4; color: #000 !important; }
-    .info-card { background-color: #e8f4f8; padding: 15px; border-radius: 8px; border: 1px solid #d1e7dd; text-align: center; height: 100%; }
+    
+    /* FIXED: Force Text Black for Info Cards */
+    .info-card { 
+        background-color: #e8f4f8; 
+        padding: 15px; 
+        border-radius: 8px; 
+        border: 1px solid #d1e7dd; 
+        text-align: center; 
+        height: 100%; 
+        color: #000000 !important;
+    }
+    .info-card b, .info-card h3, .info-card p {
+        color: #000000 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -80,7 +106,7 @@ with col1:
 with col2:
     scan_btn = st.button("🚀 Test Speed", type="primary", use_container_width=True)
 
-# --- PRE-SCAN DASHBOARD ---
+# --- PRE-SCAN DASHBOARD (Fills the empty space) ---
 if not scan_btn:
     st.markdown("### Why Server Speed Matters")
     c1, c2, c3 = st.columns(3)
@@ -107,7 +133,7 @@ if scan_btn and target_url:
         else:
             color, msg, status = "red", "CRITICAL: Your hosting is too slow.", "FAIL"
 
-        # 1. The Gauge Chart
+        # 1. The Gauge Chart (Visual Hook)
         fig = go.Figure(go.Indicator(
             mode = "gauge+number",
             value = ttfb,
