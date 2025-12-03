@@ -92,7 +92,7 @@ with st.sidebar:
     🔴 **> 600ms:** Critical
     """)
     st.markdown("---")
-    st.caption("Tool by [Your Name]")
+    st.caption("Tool by Technoworks")
 
 # --- MAIN UI ---
 st.markdown('<div class="main-header">⚡ Site Speed Doctor</div>', unsafe_allow_html=True)
