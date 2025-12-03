@@ -15,6 +15,16 @@ LINK_WHUK = "https://www.awin1.com/cread.php?awinmid=27692&awinaffid=2667810&ued
 
 st.set_page_config(page_title="Site Speed Doctor", page_icon="⚡", layout="centered")
 
+# --- HIDE STREAMLIT STYLE ---
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
 # --- CUSTOM CSS ---
 st.markdown("""
 <style>
