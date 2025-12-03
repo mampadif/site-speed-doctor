@@ -1,156 +1,293 @@
 import streamlit as st
-import requests
+import streamlit.components.v1 as components
+import os
+import pickle
+import re
+import pandas as pd
+import plotly.express as px
 import time
-import plotly.graph_objects as go
+import base64
+from datetime import datetime
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
-# --- AFFILIATE CONFIGURATION ---
-# 1. WP ENGINE (High Ticket - $200 Min)
-LINK_WPENGINE = "https://www.shareasale.com/r.cfm?b=394686&u=YOUR_ID&m=41388"
+# --- PAGE CONFIG ---
+st.set_page_config(
+    page_title="Vampire Subscription Hunter", 
+    page_icon="🧛", 
+    layout="wide", 
+    initial_sidebar_state="expanded"
+)
 
-# 2. CLOUDWAYS (Recurring Income)
-LINK_CLOUDWAYS = "https://www.cloudways.com/en/?id=YOUR_ID"
+# --- IMPACT SITE VERIFICATION (ADVANCED METHOD) ---
+# 1. We keep the visible text just in case human reviewers look at it.
+st.write("Impact-Site-Verification: 09b002e9-e85d-4aef-a104-50aeeade5923")
 
-# 3. WEBHOSTING UK (Your New Awin Link)
-LINK_WHUK = "https://www.awin1.com/cread.php?awinmid=27692&awinaffid=2667810&ued=https%3A%2F%2Fwww.webhosting.uk.com%2Fwordpress-hosting"
+# 2. We inject it into the HTML structure so bots can find it in the source code.
+components.html(
+    """
+    <html>
+        <head>
+            <meta name="impact-site-verification" content="09b002e9-e85d-4aef-a104-50aeeade5923" />
+        </head>
+        <body>
+            <div style="display:none;">Impact-Site-Verification: 09b002e9-e85d-4aef-a104-50aeeade5923</div>
+        </body>
+    </html>
+    """,
+    height=0, # Keeps it invisible to the user layout
+    width=0
+)
 
-st.set_page_config(page_title="Site Speed Doctor", page_icon="⚡", layout="centered")
+# --- CONFIGURATION & AFFILIATE LINKS ---
+LINK_ROCKET_MONEY = "https://www.rocketmoney.com/?utm_source=vampire_hunter_tool&utm_medium=referral&utm_campaign=audit_tool" 
+LINK_POCKETGUARD = "https://pocketguard.com/?utm_source=vampire_hunter_tool&utm_medium=referral&utm_campaign=audit_tool"
+LINK_TRIM = "https://www.asktrim.com/?utm_source=vampire_hunter_tool&utm_medium=referral&utm_campaign=audit_tool"
 
-# --- CUSTOM CSS (FIXED FOR DARK MODE) ---
+SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+
+# --- CUSTOM CSS ---
 st.markdown("""
 <style>
-    .main-header { font-size: 3rem; text-align: center; font-weight: 800; color: #333; margin-bottom: 10px; }
-    .sub-header { font-size: 1.2rem; text-align: center; color: #666; margin-bottom: 30px; }
-    .metric-box { text-align: center; padding: 20px; background: #f0f2f6; border-radius: 10px; margin: 10px 0; }
-    
-    /* FIXED: Force Text Black for Recommendation Box */
-    .recommendation-box { 
-        border-left: 5px solid #ff4b4b; 
-        padding: 20px; 
-        background-color: #fff5f5; 
-        border-radius: 5px; 
-        margin-top: 20px;
-        color: #000000 !important;
+    /* Header Styling */
+    .main-header { 
+        font-size: 3rem; 
+        color: #1f77b4; 
+        text-align: center; 
+        margin-bottom: 2rem; 
+        font-weight: 700; 
     }
-    .recommendation-box h3, .recommendation-box p, .recommendation-box strong {
-        color: #000000 !important;
+    
+    /* Metrics and Boxes */
+    .metric-card { background-color: #f0f2f6; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #1f77b4; }
+    .success-box { background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 1rem; margin: 1rem 0; color: #155724; }
+    .warning-box { background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 1rem; margin: 1rem 0; color: #856404; }
+    
+    /* CTA Button Styling */
+    .button-container {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .cta-button { 
+        display: inline-block; 
+        padding: 15px 25px; 
+        margin: 5px; 
+        color: white !important; /* Force text to be white */
+        text-decoration: none; 
+        border-radius: 8px; 
+        font-weight: bold; 
+        text-align: center;
+        transition: transform 0.2s;
+    }
+    
+    .cta-button:hover {
+        transform: scale(1.05);
+        opacity: 0.9;
+        text-decoration: none;
+        color: white !important;
     }
 
-    /* Buttons */
-    .cta-button { 
-        display: block; width: 100%; padding: 12px; margin: 5px 0;
-        text-align: center; color: white !important; text-decoration: none; 
-        font-weight: bold; border-radius: 8px; font-size: 1rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: transform 0.1s;
-    }
-    .cta-button:hover { transform: scale(1.02); }
-    
-    .btn-wpengine { background-color: #0ecad4; color: #000 !important; }
-    .btn-cloudways { background-color: #2c3e50; }
-    .btn-whuk { background-color: #0056b3; } /* WebHosting UK Blue */
-    
-    /* FIXED: Force Text Black for Info Cards */
-    .info-card { 
-        background-color: #e8f4f8; 
-        padding: 15px; 
-        border-radius: 8px; 
-        border: 1px solid #d1e7dd; 
-        text-align: center; 
-        height: 100%; 
-        color: #000000 !important;
-    }
-    .info-card b, .info-card h3, .info-card p {
-        color: #000000 !important;
-    }
+    .cta-rocket { background-color: #FF4B4B; }
+    .cta-trim { background-color: #00C853; }
+    .cta-guard { background-color: #2962FF; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- LOGIC ---
-def check_ttfb(url):
+# --- AUTHENTICATION ---
+@st.cache_data(show_spinner=False)
+def get_gmail_service():
+    creds = None
+
     try:
-        if not url.startswith(('http://', 'https://')): url = 'https://' + url
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-        start = time.time()
-        response = requests.get(url, headers=headers, timeout=10)
-        ttfb = (time.time() - start) * 1000
-        return {"success": True, "ttfb": round(ttfb, 2), "url": url}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+        if 'token_pickle' in st.secrets:
+            try:
+                token_bytes = base64.b64decode(st.secrets['token_pickle'])
+                creds = pickle.loads(token_bytes)
+            except Exception:
+                pass 
+    except Exception:
+        pass
 
-# --- SIDEBAR ---
+    if not creds and os.path.exists('token.pickle'):
+        try:
+            with open('token.pickle', 'rb') as token:
+                creds = pickle.load(token)
+        except Exception:
+            pass
+
+    if creds and creds.expired and creds.refresh_token:
+        try:
+            creds.refresh(Request())
+        except Exception:
+            st.error("Login expired. Please re-connect.")
+            return None
+
+    if not creds or not creds.valid:
+        if os.path.exists('credentials.json'):
+             try:
+                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+                creds = flow.run_local_server(port=0)
+                with open('token.pickle', 'wb') as token: pickle.dump(creds, token)
+             except Exception as e:
+                st.warning("⚠️ Authentication requires a local browser.")
+                return None
+        else:
+             st.warning("⚠️ Authentication Failed.")
+             return None
+    
+    return build('gmail', 'v1', credentials=creds)
+
+# --- SCANNER LOGIC ---
+def categorize_subscription(subject, sender, snippet):
+    text = f"{subject} {sender} {snippet}".lower()
+    if any(w in text for w in ['netflix', 'hulu', 'disney', 'hbo', 'prime', 'youtube']): return "Streaming"
+    if any(w in text for w in ['spotify', 'apple music', 'pandora', 'audible']): return "Music/Audio"
+    if any(w in text for w in ['adobe', 'microsoft', 'slack', 'zoom', 'canva', 'chatgpt']): return "Software/SaaS"
+    if any(w in text for w in ['aws', 'azure', 'digitalocean', 'godaddy', 'hostinger']): return "Tech Infrastructure"
+    if any(w in text for w in ['gym', 'fitness', 'peloton', 'myfitnesspal']): return "Health"
+    if any(w in text for w in ['food', 'hello fresh', 'uber eats', 'doordash']): return "Food"
+    return "General Subscription"
+
+@st.cache_data(show_spinner=False)
+def scan_inbox(_service, days_back=90):
+    query = f'(subject:(receipt OR invoice OR subscription OR renewal OR "trial ending" OR "auto-renew") OR from:(billing OR noreply OR support)) newer_than:{days_back}d -category:promotions'
+    try:
+        with st.spinner("🔍 Scanning inbox for vampires..."):
+            results = _service.users().messages().list(userId='me', q=query, maxResults=60).execute()
+        messages = results.get('messages', [])
+        if not messages: return pd.DataFrame()
+        
+        found_subs = []
+        progress_bar = st.progress(0)
+        
+        for idx, msg in enumerate(messages):
+            try:
+                msg_data = _service.users().messages().get(userId='me', id=msg['id'], format='metadata').execute()
+                headers = msg_data['payload']['headers']
+                snippet = msg_data.get('snippet', '')
+                
+                subject = next((h['value'] for h in headers if h['name'] == 'Subject'), "No Subject")
+                sender = next((h['value'] for h in headers if h['name'] == 'From'), "Unknown")
+                date = next((h['value'] for h in headers if h['name'] == 'Date'), "")
+                
+                cost_match = re.search(r'[\$\£\€](\d+[,.]?\d*\.\d{2})', snippet)
+                if not cost_match: cost_match = re.search(r'(\d+[,.]?\d*\.\d{2})\s*[\$\£\€]', snippet)
+                
+                cost = float(cost_match.group(1).replace(',', '')) if cost_match else 0.0
+                clean_sender = re.sub(r'<[^>]+>', '', sender).replace('"', '').strip()
+                
+                if cost > 0 or any(x in subject.lower() for x in ['renew', 'subscription', 'bill']):
+                    found_subs.append({
+                        "Sender": clean_sender,
+                        "Subject": subject,
+                        "Cost": cost,
+                        "Type": categorize_subscription(subject, clean_sender, snippet),
+                        "Date": date
+                    })
+                
+                time.sleep(0.05) 
+                progress_bar.progress((idx + 1) / len(messages))
+                
+            except HttpError: continue
+                
+        progress_bar.empty()
+        return pd.DataFrame(found_subs)
+    except HttpError as e:
+        st.error(f"Gmail API Error: {e}")
+        return pd.DataFrame()
+
+# --- UI LAYOUT ---
+st.markdown('<h1 class="main-header">🧛 Vampire Subscription Hunter</h1>', unsafe_allow_html=True)
+
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2966/2966486.png", width=80)
-    st.markdown("### ⚡ Speed Benchmarks")
-    st.info("""
-    **Time To First Byte (TTFB)**
-    
-    🟢 **< 200ms:** Excellent
-    
-    🟡 **200-600ms:** Average
-    
-    🔴 **> 600ms:** Critical
-    """)
+    st.markdown("### 🔧 Configuration")
+    scan_days = st.slider("Scan Period (days)", 30, 180, 90)
+    st.info("🔒 **Privacy:** Data is processed locally. We never see your emails.")
+
+    # --- CLOUD DEPLOYMENT HELPER ---
     st.markdown("---")
-    st.caption("Tool by [Your Name]")
+    st.markdown("### ☁️ Cloud Setup")
+    if st.checkbox("Generate Cloud Token"):
+        if os.path.exists('token.pickle'):
+            with open('token.pickle', 'rb') as token:
+                creds = pickle.load(token)
+                token_b64 = base64.b64encode(pickle.dumps(creds)).decode()
+                st.success("Token Generated!")
+                st.markdown("**1. Copy this long string:**")
+                st.code(token_b64)
+                st.markdown("**2. Go to Streamlit Cloud -> App Settings -> Secrets**")
+                st.markdown("**3. Paste it like this:**")
+                st.code('token_pickle = "PASTE_HERE"', language='toml')
+        else:
+            st.warning("You must run this app LOCALLY first and login to generate the token file.")
 
-# --- MAIN UI ---
-st.markdown('<div class="main-header">⚡ Site Speed Doctor</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Check your server response time (TTFB) instantly.</div>', unsafe_allow_html=True)
+col1, col2 = st.columns([2, 1])
+with col1: st.markdown('<div class="warning-box"><h4>💡 Did You Know?</h4>The average person wastes <strong>$200+ per month</strong> on forgotten subscriptions.</div>', unsafe_allow_html=True)
+with col2: st.markdown('<div class="success-box"><h4>✅ Goal</h4>Find hidden costs and cancel them instantly.</div>', unsafe_allow_html=True)
 
-col1, col2 = st.columns([3, 1])
-with col1:
-    target_url = st.text_input("Website URL", placeholder="example.com", label_visibility="collapsed")
-with col2:
-    scan_btn = st.button("🚀 Test Speed", type="primary", use_container_width=True)
+st.markdown("---")
+col_a, col_b, col_c = st.columns([1, 2, 1])
+with col_b: scan_button = st.button("🚀 Connect Gmail & Start Scan", type="primary", use_container_width=True)
 
-if not scan_btn:
-    st.markdown("### Why Server Speed Matters")
-    c1, c2, c3 = st.columns(3)
-    with c1: st.markdown('<div class="info-card">📈 <b>SEO Ranking</b><br><br>Google penalizes slow servers.</div>', unsafe_allow_html=True)
-    with c2: st.markdown('<div class="info-card">💰 <b>Conversion</b><br><br>1s delay = 7% drop in sales.</div>', unsafe_allow_html=True)
-    with c3: st.markdown('<div class="info-card">📱 <b>Mobile Users</b><br><br>Slow sites fail on 4G/5G.</div>', unsafe_allow_html=True)
-
-if scan_btn and target_url:
-    with st.spinner("Pinging server..."):
-        result = check_ttfb(target_url)
+# --- RESULTS DISPLAY ---
+if scan_button:
+    service = get_gmail_service()
+    if service:
+        df = scan_inbox(service, scan_days)
         
-    if result["success"]:
-        ttfb = result["ttfb"]
-        
-        if ttfb < 200: color, msg, status = "green", "Excellent! Your server is fast.", "PASS"
-        elif ttfb < 600: color, msg, status = "orange", "Acceptable, but could be faster.", "WARN"
-        else: color, msg, status = "red", "CRITICAL: Your hosting is too slow.", "FAIL"
+        if not df.empty:
+            st.success(f"🎯 Found {len(df)} potential subscriptions!")
+            
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Total Monthly Waste", f"${df['Cost'].sum():.2f}")
+            m2.metric("Avg. Item Cost", f"${df['Cost'].mean():.2f}")
+            m3.metric("Active Subs", len(df))
+            m4.metric("Unique Services", df['Sender'].nunique())
+            
+            st.markdown("---")
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                fig_pie = px.pie(df, values='Cost', names='Type', title='Cost by Category', hole=0.4, color_discrete_sequence=px.colors.qualitative.Set3)
+                st.plotly_chart(fig_pie, use_container_width=True)
+            with c2:
+                fig_bar = px.bar(df.nlargest(10, 'Cost'), x='Cost', y='Sender', orientation='h', title='Most Expensive Vampires', color='Cost', color_continuous_scale='reds')
+                st.plotly_chart(fig_bar, use_container_width=True)
 
-        fig = go.Figure(go.Indicator(
-            mode = "gauge+number", value = ttfb, title = {'text': "Response Time (ms)"},
-            gauge = {'axis': {'range': [0, 1500]}, 'bar': {'color': color},
-                     'steps': [{'range': [0, 200], 'color': "#d4edda"}, {'range': [200, 600], 'color': "#fff3cd"}, {'range': [600, 1500], 'color': "#f8d7da"}],
-                     'threshold': {'line': {'color': "red", 'width': 4}, 'thickness': 0.75, 'value': 600}}
-        ))
-        st.plotly_chart(fig, use_container_width=True)
+            st.subheader("📋 Detailed Subscription List")
+            st.dataframe(
+                df[['Sender', 'Cost', 'Subject', 'Date', 'Type']], 
+                column_config={"Cost": st.column_config.NumberColumn(format="$%.2f")}, 
+                use_container_width=True
+            )
+            
+            # Export CSV
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Export to CSV", csv, f"vampire_scan_{datetime.now().strftime('%Y%m%d')}.csv", "text/csv")
 
-        if status == "FAIL" or status == "WARN":
+            st.markdown("---")
+            
+            # THE MONEY SAVING SECTION (CTAs)
             st.markdown(f"""
-            <div class="recommendation-box">
-                <h3 style="margin-top:0">⚠️ Diagnosis: {msg}</h3>
-                <p>Your server took <strong>{ttfb}ms</strong> just to wake up.</p>
-                <p><strong>Solution:</strong> Move to a high-performance host.</p>
+            <div style="background-color: #e3f2fd; padding: 2rem; border-radius: 10px; text-align: center; border: 1px solid #90caf9;">
+                <h2 style="color: #0d47a1;">🛑 Stop Losing Money!</h2>
+                <p style="font-size: 1.1rem;">You are wasting <strong>${df['Cost'].sum():.2f} / month</strong>. Use these tools to fix it now:</p>
+                <div class="button-container">
+                    <a href="{LINK_ROCKET_MONEY}" target="_blank" class="cta-button cta-rocket">📉 Cancel with Rocket Money</a>
+                    <a href="{LINK_TRIM}" target="_blank" class="cta-button cta-trim">💸 Lower Bills with Trim</a>
+                    <a href="{LINK_POCKETGUARD}" target="_blank" class="cta-button cta-guard">🛡️ Budget with PocketGuard</a>
+                </div>
             </div>
             """, unsafe_allow_html=True)
-            
-            st.markdown("### 🚀 Recommended Fixes:")
-            
-            # --- UPDATED TRIFECTA WITH WEBHOSTING UK ---
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.markdown(f"""<a href="{LINK_WPENGINE}" target="_blank" class="cta-button btn-wpengine">💎 WP Engine<br><span style='font-size:0.8em'>Best Managed</span></a>""", unsafe_allow_html=True)
-            with c2:
-                st.markdown(f"""<a href="{LINK_CLOUDWAYS}" target="_blank" class="cta-button btn-cloudways">☁️ Cloudways<br><span style='font-size:0.8em'>Best Speed</span></a>""", unsafe_allow_html=True)
-            with c3:
-                # UPDATED BUTTON FOR WHUK
-                st.markdown(f"""<a href="{LINK_WHUK}" target="_blank" class="cta-button btn-whuk">🇬🇧 WebHosting UK<br><span style='font-size:0.8em'>Best Value</span></a>""", unsafe_allow_html=True)
+
         else:
-            st.success(f"✅ {msg}")
-            st.balloons()
-    else:
-        st.error(f"Error: {result.get('error')}")
+            st.info("✅ No subscriptions found! Your inbox is clean.")
+
+st.markdown("---")
+st.markdown("<div style='text-align: center; color: #666;'>⚠️ Estimates based on email subject lines. Verify with your bank.</div>", unsafe_allow_html=True)
