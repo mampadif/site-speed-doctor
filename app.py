@@ -143,12 +143,12 @@ if scan_btn and target_url:
             
             st.markdown("### 🚀 Recommended Fixes:")
             
-            # --- UPDATED TRIFECTA (SCALA, CLOUDWAYS, WHUK) ---
+            # --- THE NEW TRIFECTA (SCALA, CLOUDWAYS, WHUK) ---
             c1, c2, c3 = st.columns(3)
             with c1:
                 st.markdown(f"""<a href="{LINK_SCALA}" target="_blank" class="cta-button btn-scala">🚀 Scala Hosting<br><span style='font-size:0.8em'>High Performance VPS</span></a>""", unsafe_allow_html=True)
             with c2:
-                st.markdown(f"""<a href="{LINK_CLOUDWAYS}" target="_blank" class="cta-button btn-cloudways">☁️ Cloudways<br><span style='font-size:0.8em'>Best Cloud Tech</span></a>""", unsafe_allow_html=True)
+                st.markdown(f"""<a href="{LINK_CLOUDWAYS}" target="_blank" class="cta-button btn-cloudways">☁️ Cloudways<br><span style='font-size:0.8em'>Best Tech</span></a>""", unsafe_allow_html=True)
             with c3:
                 st.markdown(f"""<a href="{LINK_WHUK}" target="_blank" class="cta-button btn-whuk">🇬🇧 WebHosting UK<br><span style='font-size:0.8em'>Best Value</span></a>""", unsafe_allow_html=True)
         else:
